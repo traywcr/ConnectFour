@@ -1,3 +1,6 @@
+// Fun Project Developed by Cody Traywick
+// Checks from player moves rather than iterating across the board every time
+
 import java.util.*;
 
 public class ConnectFour
@@ -9,16 +12,17 @@ public class ConnectFour
 
   static final char UNINITIALIZED = ' ';
 
-
+  // Stores player 1's moves
   ArrayList<Integer> player1Moves = new ArrayList<>();
   int [] player1Rows = new int [6];
   int [] player1Cols = new int [7];
 
-
+  // Stores player 2's moves
   ArrayList<Integer> player2Moves = new ArrayList<>();
   int [] player2Rows = new int [6];
   int [] player2Cols = new int [7];
 
+  // Helps with highlighting previous moves and the winning moves in printBoard()
   int previousMove = 0;
   int [] winningPositions = new int [4];
 
@@ -32,11 +36,13 @@ public class ConnectFour
     return matrix;
   }
 
+  // Prints the board after a move is made
   public void printBoard(char [][] board, int previousMove, char player2)
   {
 
     int pieceRow = 0;
     int pieceCol = 0;
+    int iterator = 0;
 
     // Iterates through the winning positions array to highlight in green
     int winningPostionsIterator = 0;
@@ -69,12 +75,21 @@ public class ConnectFour
             pieceRow++;
           }
 
+          if (pieceRow == winningPositions[iterator] / 10 - 1 && pieceCol
+                 == winningPositions[iterator] % 10 - 1)
+          {
+            System.out.print(ANSI_GREEN + board[pieceRow][pieceCol++] + ANSI_RESET);
+            iterator++;
+            if (iterator >= 4)
+              iterator = 0;
+          }
           // Print last move as green to indicate the position
-          if (pieceRow == previousMove / 10 - 1 && pieceCol == previousMove % 10 - 1)
+          else if (pieceRow == previousMove / 10 - 1 && pieceCol == previousMove % 10 - 1)
           {
             System.out.print(ANSI_GREEN + board[previousMove / 10 - 1][previousMove % 10 - 1] + ANSI_RESET);;
             pieceCol++;
           }
+
           // Print player 2's pieces as red
           else if (board[pieceRow][pieceCol] == player2)
             System.out.print(ANSI_RED + board[pieceRow][pieceCol++] + ANSI_RESET);
@@ -96,12 +111,51 @@ public class ConnectFour
     Scanner move = new Scanner(System.in);
     int moveColumn = move.nextInt() - 1;
 
+    // If move is out of bounds pick a new one
     while (moveColumn < 0 || moveColumn > 6)
     {
       System.out.println("Invalid input, please pick a new column");
       moveColumn = move.nextInt() - 1;
     }
 
+    // Start at bottom of column to see if there is a piece there
+    for (int row = 5; row >= 0; row --)
+    {
+      if (board[row][moveColumn] == UNINITIALIZED)
+      {
+        board[row][moveColumn] = currentPlayer;
+        previousMove = (row + 1) * 10 + moveColumn + 1;
+
+        if (currentPlayer == player1)
+        {
+          player1Moves.add((row + 1) * 10 + moveColumn + 1);
+          player1Rows[row]++;
+          player1Cols[moveColumn]++;
+        }
+        else
+        {
+          player2Moves.add((row + 1) * 10 + moveColumn + 1);
+          player2Rows[row]++;
+          player2Cols[moveColumn]++;
+        }
+        return board;
+      }
+      // If column is full call method again
+      if (row == 0 && board[row][moveColumn] != UNINITIALIZED)
+      {
+        System.out.println("Invalid Move: Please pick another one");
+        makeMove(board, currentPlayer, player1, player2);
+      }
+    }
+
+    return board;
+  }
+
+  // Method to make random move in a random game
+  public char [][] makeRandomMove(char [][] board, int randomNumber,
+                                  char currentPlayer, char player1, char player2)
+  {
+    int moveColumn = randomNumber - 1;
     // Start at bottom to see if there is a piece there
     for (int row = 5; row >= 0; row --)
     {
@@ -126,16 +180,16 @@ public class ConnectFour
       }
       if (row == 0 && board[row][moveColumn] != UNINITIALIZED)
       {
+        randomNumber = (int)(Math.random() * 7) + 1;
+        System.out.println(randomNumber);
         System.out.println("Invalid Move: Please pick another one");
-        makeMove(board, currentPlayer, player1, player2);
+        makeRandomMove(board, randomNumber, currentPlayer, player1, player2);
       }
-
-
     }
-
-    return board;
+      return board;
   }
 
+  // Helper function to call the right player's win check
   public boolean winGame(char [][] board, int player)
   {
     if (player == 0)
@@ -162,19 +216,13 @@ public class ConnectFour
     }
 
     // Check diagonals
-    if (checkDownRightDiagonal(board, playerMoves)
-        || checkUpRightDiagonal(board, playerMoves))
+    if (checkDownRightDiagonal(board, playerMoves) || checkUpRightDiagonal(board, playerMoves))
     {
       System.out.println("You won on a diagonal!");
       return true;
     }
-    // TODO: trigger if there is 4 on the same column
-      // if column is the same and 4 consecutive rows
-        // return true;
 
-      // if
-
-
+    // No four in a row found
     return false;
   }
 
@@ -190,7 +238,7 @@ public class ConnectFour
         for (int j = 1; j <= cols.length; j++)
         {
           if(playerMoves.contains((i + 1) * 10 + j))
-            winCheckRow.add(j);
+            winCheckRow.add((i + 1) * 10 + j);
 
           // Allows to check elements to the right rather than both ways
           Collections.sort(winCheckRow);
@@ -202,7 +250,7 @@ public class ConnectFour
               break;
             // If the next space has been used and is not the player's piece remove it
             else if (winCheckRow.get(0) + 1 != winCheckRow.get(1) &&
-                     board[i][winCheckRow.get(1) - 1] != UNINITIALIZED)
+                     board[i][winCheckRow.get(1) % 10 - 1] != UNINITIALIZED)
             {
               winCheckRow.remove(0);
               continue;
@@ -211,7 +259,10 @@ public class ConnectFour
             else if (winCheckRow.get(0) + 1 == winCheckRow.get(1) && winCheckRow.get(1) + 1 ==
                      winCheckRow.get(2) && winCheckRow.get(2) + 1 == winCheckRow.get(3))
             {
-              System.out.println(ANSI_RED + "Winning positions: " + winCheckRow + ANSI_RESET);
+              // Add winning positions to the array for printing
+              for (int z = 0; z < winningPositions.length; z++)
+                winningPositions[z] = winCheckRow.get(z);
+
               return true;
             }
           }
@@ -233,7 +284,7 @@ public class ConnectFour
         for (int j = 1; j <= rows.length; j++)
         {
           if(playerMoves.contains((j) * 10 + (i + 1)))
-            winCheckCol.add(j);
+            winCheckCol.add((j) * 10 + (i + 1));
 
           // Allows to check elements to the right rather than both ways
           Collections.sort(winCheckCol);
@@ -244,22 +295,20 @@ public class ConnectFour
             if (winCheckCol.size() < 4)
               break;
             // If the next space has been used and is not the player's piece remove it
-            else if (winCheckCol.get(0) + 1 != winCheckCol.get(1) &&
-                     board[j - 1][winCheckCol.get(1)] != UNINITIALIZED)
+            else if (winCheckCol.get(0) + 10 != winCheckCol.get(1) &&
+                     board[winCheckCol.get(1) / 10 - 1][i] != UNINITIALIZED)
             {
               winCheckCol.remove(0);
               continue;
             }
             // If 4 in a column, there is a winner
-            else if (winCheckCol.get(0) + 1 == winCheckCol.get(1) && winCheckCol.get(1) + 1 ==
-                     winCheckCol.get(2) && winCheckCol.get(2) + 1 == winCheckCol.get(3))
+            else if (winCheckCol.get(0) + 10 == winCheckCol.get(1) && winCheckCol.get(1) + 10 ==
+                     winCheckCol.get(2) && winCheckCol.get(2) + 10 == winCheckCol.get(3))
             {
-              System.out.println("Winning positions: " + winCheckCol);
+              // Add winning positions to the array for printing
               for (int z = 0; z < winningPositions.length; z++)
-              {
-                winningPositions[z] = ((i + 1) * 10) + winCheckCol.get(z);
-                System.out.print(winningPositions[z] + " ");
-              }
+                winningPositions[z] = winCheckCol.get(z);
+
               return true;
             }
           }
@@ -271,11 +320,9 @@ public class ConnectFour
 
   private boolean checkDownRightDiagonal(char [][] board, ArrayList<Integer> playerMoves)
   {
-
+    // Stores all the down right diagonal values to get frequency
     ArrayList<Integer> topLeftDownRight = new ArrayList<>();
-
     ArrayList<Integer> winTLDR = new ArrayList<>();
-
 
     int numColumns = 7;
 
@@ -288,9 +335,27 @@ public class ConnectFour
     {
       if (Collections.frequency(topLeftDownRight, i) >= 4)
       {
-        // Only 4 pieces can fit in diagonals so if it is filled then they win
+        // Only 4 pieces can fit in diagonals 4 and 9 so if it is filled then they win
         if (i == 4 || i == 9)
-          return true;
+        {
+          if (i == 4)
+          {
+            winningPositions[0] = 31;
+            for (int j = 1; j < winningPositions.length; j++)
+              winningPositions[j] = winningPositions[j - 1] + 11;
+
+            return true;
+          }
+          if (i == 9)
+          {
+            winningPositions[0] = 14;
+            for (int j = 1; j < winningPositions.length; j++)
+              winningPositions[j] = winningPositions[j - 1] + 11;
+
+            return true;
+          }
+            return true;
+        }
 
         // If the player's moves are equal to the desired diagonal add them to the check
         for (int row = 0; row < playerMoves.size(); row++)
@@ -300,34 +365,43 @@ public class ConnectFour
 
         // Sort array to check elements in the right down diagonal
         Collections.sort(winTLDR);
+        System.out.println("TLDR: " + winTLDR);
 
         for (int j = 0; j < winTLDR.size(); j++)
         {
+          // If the win check size gets below 4 then break out of loop
           if (winTLDR.size() < 4)
             break;
 
+          // If the next piece in the diagonal is not equal to the player's piece
+          // then remove the first piece and continue loop
           else if (winTLDR.get(0) + 11 != winTLDR.get(1) &&
                      board[(winTLDR.get(0) / 10)][winTLDR.get(0) % 10] != UNINITIALIZED)
           {
             winTLDR.remove(0);
             continue;
           }
+          // If four consecutive pieces are found, we have a winner
           else if (winTLDR.get(0) + 11 == winTLDR.get(1) && winTLDR.get(1) + 11 ==
                    winTLDR.get(2) && winTLDR.get(2) + 11 == winTLDR.get(3))
-            return true;
+          {
+            // Add winning positions to the array for printing
+            for (int z = 0; z < winningPositions.length; z++)
+              winningPositions[z] = winTLDR.get(z);
 
+            return true;
+          }
         }
       }
     }
 
-    // There's only 6 diagonals where there is a possiblility of winning
-    //if (topLeftDownRight )
 
     return false;
   }
 
   private boolean checkUpRightDiagonal(char [][] board, ArrayList<Integer> playerMoves)
   {
+    // Stores all the up right diagonal values to get frequency
     ArrayList<Integer> bottomLeftUpRight = new ArrayList<>();
 
     ArrayList<Integer> winBLUR = new ArrayList<>();
@@ -343,10 +417,27 @@ public class ConnectFour
     {
       if (Collections.frequency(bottomLeftUpRight, i) >= 4)
       {
+        // Only 4 pieces can fit in diagonals 5 and 10 so if it is filled then they win
         if (i == 5 || i == 10)
-          return true;
-      }
+        {
+          if (i == 5)
+          {
+            winningPositions[0] = 14;
+            for (int j = 1; j < winningPositions.length; j++)
+              winningPositions[j] = winningPositions[j - 1] + 9;
 
+            return true;
+          }
+          if (i == 10)
+          {
+            winningPositions[0] = 37;
+            for (int j = 1; j < winningPositions.length; j++)
+              winningPositions[j] = winningPositions[j - 1] + 9;
+
+            return true;
+          }
+          return true;
+        }
 
       // If the player's moves are equal to the desired diagonal add them to the check
       for (int row = 0; row < playerMoves.size(); row++)
@@ -358,42 +449,52 @@ public class ConnectFour
 
       for (int j = 0; j < winBLUR.size(); j++)
       {
+        // If the win check size gets below 4 then break out of loop
         if (winBLUR.size() < 4)
           break;
-        else if (winBLUR.get(0) / 10 - 2 < 0 || winBLUR.get(0) / 10 - 2 > 6)
+        // If the rows or the columns getting checked are out of bounds, continue
+        else if (winBLUR.get(0) / 10 - 2 < 0 || winBLUR.get(0) / 10 - 2 > 6
+                || winBLUR.get(0) % 10 < 0 || winBLUR.get(0) % 10 > 6)
           continue;
+        // If the next piece in the diagonal is not equal to the player's piece
+        // then remove the first piece and continue loop
         else if (winBLUR.get(0) + 9 != winBLUR.get(1) &&
                    board[(winBLUR.get(0) / 10 - 2)][winBLUR.get(0) % 10] != UNINITIALIZED)
         {
           winBLUR.remove(0);
           continue;
         }
+        // If four consecutive pieces are found, we have a winner
         else if (winBLUR.get(0) + 9 == winBLUR.get(1) && winBLUR.get(1) + 9 ==
                  winBLUR.get(2) && winBLUR.get(2) + 9 == winBLUR.get(3))
         {
+          // Add winning positions to the array for printing
+          for (int z = 0; z < winningPositions.length; z++)
+            winningPositions[z] = winBLUR.get(z);
 
           return true;
         }
       }
     }
+  }
     return false;
   }
 
+  // Clears screen to print a new board
+  // It makes it look like it's updating the without printing a new one
   public static void clearScreen()
   {
     System.out.print("\033[H\033[2J");
     System.out.flush();
   }
 
-
-  public static void main(String [] args)
+  public static void playConnect4()
   {
     ConnectFour game = new ConnectFour();
 
     char player1, player2;
+      clearScreen();
 
-    int count = 0;
-    clearScreen();
     Scanner scan = new Scanner(System.in);
     System.out.println("Player 1: What is the first letter of your name? ");
     player1 = scan.next().charAt(0);
@@ -440,30 +541,112 @@ public class ConnectFour
 
       playerNumber++;
     }
-    game.printBoard(gameBoard, game.previousMove, player2);
-    if (playerNumber < (gameBoard.length * (gameBoard.length + 1)))
-      System.out.println("Player " + (((playerNumber - 1) % 2) + 1) + " Won!!!");
+    clearScreen();
 
+    game.printBoard(gameBoard, game.previousMove, player2);
+
+    if (playerNumber < (gameBoard.length * (gameBoard.length + 1)))
+      {
+        System.out.println("Player " + (((playerNumber - 1) % 2) + 1) + " Won!!!");
+        System.out.print("Winning Postions: ");
+        for (int i = 0; i < game.winningPositions.length; i++)
+          System.out.print(game.winningPositions[i] + " ");
+      }
     else
       System.out.println("Nobody Wins...");
 
+    System.out.println();
+  }
 
+
+  public static void randomGame()
+  {
+    ConnectFour gamerrr = new ConnectFour();
+    char player1 = '1', player2 = '2';
+    clearScreen();
+
+    char p1, p2;
+    p1 = player1;
+    p2 = player2;
+
+    char gameBoard [][] = gamerrr.initializeBoard();
+    clearScreen();
+    gamerrr.printBoard(gameBoard, 11 , player2);
+
+    int playerNumber = 0;
+    boolean somebodyWon = false;
+
+
+    while (!somebodyWon && playerNumber < 42)
+    {
+      try
+      {
+        Thread.sleep(200);
+      }
+      catch(InterruptedException ex)
+      {
+        Thread.currentThread().interrupt();
+      }
+
+      int r = (int)(Math.random() * 7) + 1;
+      if (playerNumber % 2 == 0)
+      {
+        gameBoard = gamerrr.makeRandomMove(gameBoard, r, player1, p1, p2);
+        clearScreen();
+        gamerrr.printBoard(gameBoard, gamerrr.previousMove, player2);
+        if (gamerrr.winGame(gameBoard, ((playerNumber % 2))))
+          somebodyWon = true;
+      }
+
+      else
+      {
+        gameBoard = gamerrr.makeRandomMove(gameBoard, r, player2, p1, p2);
+        clearScreen();
+        gamerrr.printBoard(gameBoard, gamerrr.previousMove, player2);
+        if (gamerrr.winGame(gameBoard, ((playerNumber % 2))))
+          somebodyWon = true;
+      }
+
+      playerNumber++;
     }
+    clearScreen();
+
+    gamerrr.printBoard(gameBoard, gamerrr.previousMove, player2);
+
+    if (playerNumber < (gameBoard.length * (gameBoard.length + 1)))
+    {
+      System.out.println("Player " + (((playerNumber - 1) % 2) + 1) + " Won!!!");
+      System.out.print("Winning Postions: ");
+      for (int i = 0; i < gamerrr.winningPositions.length; i++)
+        System.out.print(gamerrr.winningPositions[i] + " ");
+    }
+    else
+      System.out.println("Nobody Wins...");
+
+    System.out.println();
+  }
+
+
+  public static void main(String [] args)
+  {
+    playConnect4();
+
+
+    // Makes 100 random games
+    /*
+      for (int i = 0; i < 100; i++)
+        {
+          randomGame();
+          try
+          {
+            Thread.sleep(2000);
+          }
+          catch(InterruptedException ex)
+          {
+            Thread.currentThread().interrupt();
+          }
+        }
+      */
+  }
 
 }
-
-// Problem game: 1 2 3 2 3 1 2 3 4 5 4 7 5 5 5 3 5 3 3 7 7 7 7 7 7
-// Trying to print winning combination as green on board
-/*
-  // Print connect 4 positions in green if there is a win
-  if (pieceRow == winningPositions[winningPostionsIterator] / 10 - 1
-          && pieceCol == winningPositions[winningPostionsIterator] % 10 - 1)
-  {
-    System.out.print(ANSI_GREEN +
-                     board[winningPositions[winningPostionsIterator] / 10 - 1 ]
-                     [winningPositions[winningPostionsIterator] % 10 - 1]
-                     + ANSI_RESET);;
-    pieceCol++;
-    winningPostionsIterator++;
-  }
-*/
