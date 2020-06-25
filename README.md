@@ -1,2 +1,2 @@
 # ConnectFour
-# Simple connect four command line program without checking every space
+# Simple connect four command line program that only checks spaces that the player places a piece in
